@@ -37,35 +37,59 @@ def transform_rainfall(original_rainfall_csv_data):
     transformed_rainfall_csv_data = transformed_rainfall_csv_data.rename(columns={"SUBDIVISION": "State"})
     transformed_rainfall_csv_data=transformed_rainfall_csv_data.dropna()
     transformed_rainfall_csv_data.to_csv("transformeddatasets/transformed_rainfall.csv", index=False)
+    return transformed_rainfall_csv_data
 
 def transform_cropproduction(original_cropproduction_csv_data):
     transformed_cropproduction_csv_data = original_cropproduction_csv_data.rename(columns={"State_Name": "State", "District_Name": "District", "Crop_Year":"Year"})
     transformed_cropproduction_csv_data= transformed_cropproduction_csv_data.dropna()
     transformed_cropproduction_csv_data.to_csv("transformeddatasets/transformed_cropproduction.csv", index=False)
+    return transformed_cropproduction_csv_data
 
 def transform_drought(original_drought_csv_data):
     transformed_drought_csv_data=original_drought_csv_data.rename(columns={"ModerateDroughtProbability": "Moderate_prob", "SevereDroughtProbability":"Severe_prob"})
     transformed_drought_csv_data=transformed_drought_csv_data.dropna()
     transformed_drought_csv_data.to_csv("transformeddatasets/transformed_drought.csv", index=False)
+    return transformed_drought_csv_data
 
 def transform_weather(original_weather_csv_data):
     transformed_weather_csv_data=original_weather_csv_data.drop(columns=["sealevelpressure", "winddir", "cloudcover", "visibility", "severerisk"])
     transformed_weather_csv_data=transformed_weather_csv_data.rename(columns={"name":"District", "datetime":"Date"})    
     transformed_weather_csv_data=transformed_weather_csv_data.dropna()
     transformed_weather_csv_data.to_csv("transformeddatasets/transformed_weather.csv", index=False)
+    return transformed_weather_csv_data
+
+#loading
+def loading(rainfall, drought, cropproduction, weather):
+    from sqlalchemy import create_engine
+
+    username = "root"
+    password = "12345"
+    host = "localhost"
+    port = "3306"  # Default MySQL port is 3306
+    database = "farmerdatabase"
+    connection_string = f"mysql://{username}:{password}@{host}:{port}/{database}"
+    engine = create_engine(connection_string)
+
+    rainfall.to_sql(name='farmerrainfalltrend', con=engine, if_exists='append', index=False)
+    drought.to_sql(name='farmerdroughttrend', con=engine, if_exists='append', index=False)
+    cropproduction.to_sql(name='farmercropproductionstatistics', con=engine, if_exists='append', index=False)
+    weather.to_sql(name='farmerweatherforecast', con=engine, if_exists='append', index=False)
+
+
 
 x=extract_rainfall()
-transform_rainfall(x)
+rainfall=transform_rainfall(x)
 
 y=extract_cropproduction()
-transform_cropproduction(y)
+cropproduction=transform_cropproduction(y)
 
 z=extract_drought()
-transform_drought(z)
+drought=transform_drought(z)
 
 a=extract_weather()
-transform_weather(a)
+weather=transform_weather(a)
 
+loading(rainfall,drought,cropproduction,weather)
 
 # Define the path to the CSV file you want to monitor
 # csv_file_path = 'originaldatasets\original_rainfall.csv'
