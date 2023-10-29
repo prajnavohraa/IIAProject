@@ -237,3 +237,47 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
+
+from fuzzywuzzy import fuzz
+
+# Function to perform schema matching and select the most similar attribute
+def perform_schema_matching(attributes_a, attributes_b):
+    matches = {}
+
+    for attr_a in attributes_a:
+        max_similarity_score = 0
+        best_match = None
+
+        for attr_b in attributes_b:
+            similarity_score = fuzz.token_sort_ratio(attr_a, attr_b)
+            if similarity_score > max_similarity_score:
+                max_similarity_score = similarity_score
+                best_match = attr_b
+
+        if best_match is not None:
+            matches[attr_a] = best_match, max_similarity_score
+
+    return matches
+
+#queries
+
+#gives average temperature of a district predicted in next few days
+def get_average_temp_data(date, district):
+    sql_query = text("SELECT AVG(temp) from farmerweatherforecast where District="+district+ ";")
+    connection = engine.connect()
+    connection.execute(sql_query)
+
+#gives the rainfall of a state in a particular month and year(past)
+def get_year_month_rainfall(state,year,month):
+    sql_query = text("SELECT State, YEAR, "+month+ " from farmerrainfalltrend where State="+state+" and YEAR="+ year+";")
+    connection = engine.connect()
+    connection.execute(sql_query)
+
+
+# Perform schema matching and select the most similar attribute
+# schema_matches = perform_schema_matching(global_attributes, local_new_attributes)
+
+# Print the matching results with the highest similarity score
+# for attr_a, (best_match, max_similarity) in schema_matches.items():
+#     print(f"Best matching for '{attr_a}': '{best_match}' with similarity score: {max_similarity}")
