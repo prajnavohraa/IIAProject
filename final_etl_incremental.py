@@ -3,6 +3,7 @@ import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import pandas as pd
+from sqlalchemy import text
 
 #csv file paths
 original_rainfall_csv = "originaldatasets\original_rainfall.csv"
@@ -58,24 +59,26 @@ def transform_weather(original_weather_csv_data):
     transformed_weather_csv_data.to_csv("transformeddatasets/transformed_weather.csv", index=False)
     return transformed_weather_csv_data
 
+from sqlalchemy import create_engine
+username = "root"
+password = "12345"
+host = "localhost"
+port = "3306"  # Default MySQL port is 3306
+database = "farmerdatabase"
+connection_string = f"mysql://{username}:{password}@{host}:{port}/{database}"
+engine = create_engine(connection_string)
+
 #loading
-def loading(rainfall, drought, cropproduction, weather):
-    from sqlalchemy import create_engine
-
-    username = "root"
-    password = "12345"
-    host = "localhost"
-    port = "3306"  # Default MySQL port is 3306
-    database = "farmerdatabase"
-    connection_string = f"mysql://{username}:{password}@{host}:{port}/{database}"
-    engine = create_engine(connection_string)
-
+def global_loading(rainfall, drought, cropproduction, weather):
+    
     rainfall.to_sql(name='farmerrainfalltrend', con=engine, if_exists='append', index=False)
     drought.to_sql(name='farmerdroughttrend', con=engine, if_exists='append', index=False)
     cropproduction.to_sql(name='farmercropproductionstatistics', con=engine, if_exists='append', index=False)
     weather.to_sql(name='farmerweatherforecast', con=engine, if_exists='append', index=False)
 
 
+def local_loading(data,tablename):
+    data.to_sql(name=tablename, con=engine, if_exists='append', index=False)
 
 x=extract_rainfall()
 rainfall=transform_rainfall(x)
@@ -89,7 +92,7 @@ drought=transform_drought(z)
 a=extract_weather()
 weather=transform_weather(a)
 
-loading(rainfall,drought,cropproduction,weather)
+global_loading(rainfall,drought,cropproduction,weather)
 
 # Define the path to the CSV file you want to monitor
 # csv_file_path = 'originaldatasets\original_rainfall.csv'
@@ -97,11 +100,12 @@ loading(rainfall,drought,cropproduction,weather)
 
 initial_file_content1 = ''
 initial_file_content2 = ''
-initial_file_content3 = ''
+# initial_file_content3 = ''
 initial_file_content4 = ''
 
 class MyHandler(FileSystemEventHandler):
     def on_modified(self, event):
+        #rainfall
         if event.src_path == original_rainfall_csv:
             global initial_file_content1
             with open(original_rainfall_csv, 'r') as file:
@@ -109,9 +113,15 @@ class MyHandler(FileSystemEventHandler):
             if new_content != initial_file_content1:
                 print("original_rainfall.csv was changed")
                 data=extract_rainfall()
-                transform_rainfall(data)
+                transformed_data=transform_rainfall(data)
+                connection = engine.connect()
+                sql_query = text("drop table farmerrainfalltrend")
+                # Execute the SQL command
+                connection.execute(sql_query)
+                local_loading(transformed_data, "farmerrainfalltrend")
                 initial_file_content1 = new_content
 
+        #drought
         if event.src_path == original_drought_csv:
             global initial_file_content2
             with open(original_drought_csv, 'r') as file:
@@ -119,19 +129,32 @@ class MyHandler(FileSystemEventHandler):
             if new_content != initial_file_content2:
                 print("original_drought.csv was changed")
                 data=extract_drought()
-                transform_drought(data)
+                transformed_data=transform_drought(data)
+                connection = engine.connect()
+                sql_query = text("drop table farmerdroughttrend")
+                # Execute the SQL command
+                connection.execute(sql_query)
+                local_loading(transformed_data, "farmerdroughttrend")
                 initial_file_content2 = new_content
 
+        #cropproduction
         if event.src_path == original_cropproduction_csv:
             global initial_file_content3
+            initial_file_content3=''
             with open(original_cropproduction_csv, 'r') as file:
                 new_content = file.read()
             if new_content != initial_file_content3:
                 print("original_cropproduction.csv was changed")
                 data=extract_cropproduction()
-                transform_cropproduction(data)
+                transformed_data=transform_cropproduction(data)
+                connection = engine.connect()
+                sql_query = text("drop table farmercropproductionstatistics")
+                # Execute the SQL command
+                connection.execute(sql_query)
+                local_loading(transformed_data,"farmercropproductionstatistics")
                 initial_file_content3 = new_content
 
+        #weather
         if event.src_path == original_weather_csv:
             global initial_file_content4
             with open(original_weather_csv, 'r') as file:
@@ -139,9 +162,13 @@ class MyHandler(FileSystemEventHandler):
             if new_content != initial_file_content4:
                 print("original_weather.csv was changed")
                 data=extract_weather()
-                transform_weather(data)
+                transformed_data=transform_weather(data)
+                connection = engine.connect()
+                sql_query = text("drop table farmerweatherforecast")
+                # Execute the SQL command
+                connection.execute(sql_query)
+                local_loading(transformed_data, "farmerweatherforecast")
                 initial_file_content4 = new_content
-
 
 
 
