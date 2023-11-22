@@ -5,11 +5,38 @@ from watchdog.events import FileSystemEventHandler
 import pandas as pd
 from sqlalchemy import text
 
+#menu:
+
+ans="yes"
+while ans==1:
+    print("hi")
+    ans=int(input("continue?: "))
+
 #csv file paths
 original_rainfall_csv = "originaldatasets\original_rainfall.csv"
 original_cropproduction_csv = "originaldatasets\original_cropproduction.csv"
 original_drought_csv = "originaldatasets\original_drought.csv"
 original_weather_csv = "originaldatasets\original_weather.csv"
+
+# original_rainfall_csv = ""
+# original_cropproduction_csv = ""
+# original_drought_csv = ""
+# original_weather_csv = ""
+
+source_mapping = {
+    'originaldatasets/original_rainfall.csv': 'farmerrainfalltrend',
+    'originaldatasets/original_cropproduction.csv': 'farmercropproductionstatistics',
+    'originaldatasets/original_drought.csv': 'farmerdroughttrend',
+    'originaldatasets/original_weather.csv': 'farmerweatherforecast',
+}
+
+database_mapping = {
+    'farmerrainfalltrend': 'farmerdatabase',  # Use the actual database name you've set up in MySQL
+    'farmerdroughttrend': 'farmerdatabase',    # Use the same actual database name for all tables in the same database
+    'farmercropproductionstatistics': 'farmerdatabase',
+    'farmerweatherforecast': 'farmerdatabase',
+}
+
 
 def extract_rainfall():
     original_rainfall_csv = "originaldatasets/original_rainfall.csv"
@@ -21,10 +48,23 @@ def extract_cropproduction():
     original_cropproduction_csv_data = pd.read_csv(original_cropproduction_csv)
     return original_cropproduction_csv_data
 
+# def extract_drought():
+#     original_drought_csv = "originaldatasets\original_drought.csv"
+#     original_drought_csv_data = pd.read_csv(original_drought_csv)
+#     return original_drought_csv_data
+
 def extract_drought():
-    original_drought_csv = "originaldatasets\original_drought.csv"
-    original_drought_csv_data = pd.read_csv(original_drought_csv)
+    
+    try:
+        original_drought_csv = "originaldatasets\original_drought.csv"
+        original_drought_csv_data = pd.read_csv(original_drought_csv)
+    except FileNotFoundError:
+        print("The original file is not found. Using the alternative file.")
+        original_drought_csv = "C:\\Users\\ASUS\\Desktop\\original data\\originaldatasets\\original_drought.csv"
+        original_drought_csv_data = pd.read_csv(original_drought_csv)
+
     return original_drought_csv_data
+
 
 def extract_weather():
     original_weather_csv="originaldatasets\original_weather.csv"
@@ -68,13 +108,18 @@ database = "farmerdatabase"
 connection_string = f"mysql://{username}:{password}@{host}:{port}/{database}"
 engine = create_engine(connection_string)
 
-#loading
+# loading
 def global_loading(rainfall, drought, cropproduction, weather):
     
     rainfall.to_sql(name='farmerrainfalltrend', con=engine, if_exists='append', index=False)
     drought.to_sql(name='farmerdroughttrend', con=engine, if_exists='append', index=False)
     cropproduction.to_sql(name='farmercropproductionstatistics', con=engine, if_exists='append', index=False)
     weather.to_sql(name='farmerweatherforecast', con=engine, if_exists='append', index=False)
+
+# def global_loading(rainfall, drought, cropproduction, weather):
+#     for code_db_name, actual_db_name in database_mapping.items():
+#         transformed_data = locals()[code_db_name]  # Get the transformed data from the code's variables
+#         transformed_data.to_sql(name=actual_db_name, con=engine, if_exists='append', index=False)
 
 
 def local_loading(data,tablename):
@@ -94,16 +139,41 @@ weather=transform_weather(a)
 
 global_loading(rainfall,drought,cropproduction,weather)
 
-# Define the path to the CSV file you want to monitor
-# csv_file_path = 'originaldatasets\original_rainfall.csv'
-
-
 initial_file_content1 = ''
 initial_file_content2 = ''
 # initial_file_content3 = ''
 initial_file_content4 = ''
 
 class MyHandler(FileSystemEventHandler):
+    def on_deleted(self, event):
+        if event.src_path in source_mapping:
+            print(f"Local source {event.src_path} was removed.")
+            transformed_file = source_mapping[event.src_path]
+            connection = engine.connect()
+            sql_query = text(f"DROP TABLE IF EXISTS {transformed_file};")
+            connection.execute(sql_query)
+    
+    def on_created(self, event):
+        if event.src_path in source_mapping:
+            print(f"Local source {event.src_path} was added.")
+            transformed_file = source_mapping[event.src_path]
+
+            if transformed_file == 'transformeddatasets/transformed_rainfall.csv':
+                data = extract_rainfall()
+                transformed_data = transform_rainfall(data)
+            elif transformed_file == 'transformeddatasets/transformed_cropproduction.csv':
+                data = extract_cropproduction()
+                transformed_data = transform_cropproduction(data)
+            elif transformed_file == 'transformeddatasets/transformed_drought.csv':
+                data = extract_drought()
+                transformed_data = transform_drought(data)
+            elif transformed_file == 'transformeddatasets/transformed_weather.csv':
+                data = extract_weather()
+                transformed_data = transform_weather(data)
+
+            local_loading(transformed_data, transformed_file)
+            print(f"Data from {event.src_path} loaded into {transformed_file} in the database.")
+
     def on_modified(self, event):
         #rainfall
         if event.src_path == original_rainfall_csv:
@@ -173,7 +243,7 @@ class MyHandler(FileSystemEventHandler):
 
 
 if __name__ == "__main__":
-
+    
     #for rainfall
     with open(original_rainfall_csv, 'r') as file1:
         initial_file_content = file1.read()
@@ -238,30 +308,6 @@ if __name__ == "__main__":
         observer.stop()
     observer.join()
 
-
-from fuzzywuzzy import fuzz
-
-# Function to perform schema matching and select the most similar attribute
-def perform_schema_matching(attributes_a, attributes_b):
-    matches = {}
-
-    for attr_a in attributes_a:
-        max_similarity_score = 0
-        best_match = None
-
-        for attr_b in attributes_b:
-            similarity_score = fuzz.token_sort_ratio(attr_a, attr_b)
-            if similarity_score > max_similarity_score:
-                max_similarity_score = similarity_score
-                best_match = attr_b
-
-        if best_match is not None:
-            matches[attr_a] = best_match, max_similarity_score
-
-    return matches
-
-#queries
-
 #gives average temperature of a district predicted in next few days
 def get_average_temp_data(date, district):
     sql_query = text("SELECT AVG(temp) from farmerweatherforecast where District="+district+ ";")
@@ -281,3 +327,4 @@ def get_year_month_rainfall(state,year,month):
 # Print the matching results with the highest similarity score
 # for attr_a, (best_match, max_similarity) in schema_matches.items():
 #     print(f"Best matching for '{attr_a}': '{best_match}' with similarity score: {max_similarity}")
+
