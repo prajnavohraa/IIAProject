@@ -1,6 +1,6 @@
 # Weather Monitoring and Drought Assessment for Farmers
 
-Our project, "Weather Monitoring and Drought Assessment for Farmers," provides a platform through which farmers can access accurate and relevant information concerning vital factors like crop conditions, weather patterns, rainfall, and drought. This information will help them make appropriate decisions to help get better overall crop production.
+Project, "Weather Monitoring and Drought Assessment for Farmers," provides a platform through which farmers can access accurate and relevant information concerning vital factors like crop conditions, weather patterns, rainfall, and drought. This information will help them make appropriate decisions to help get better overall crop production.
 In this document, we mention the various methods/algorithms used to extract, transform and load information into our database. We also mention schema matching and mapping, which helped us create a uniform database which can be unified together. 
 
 ## ETL(Extract, Transform, Load) Performed:

@@ -13,10 +13,10 @@ while ans==1:
     ans=int(input("continue?: "))
 
 #csv file paths
-original_rainfall_csv = "originaldatasets\original_rainfall.csv"
-original_cropproduction_csv = "originaldatasets\original_cropproduction.csv"
-original_drought_csv = "originaldatasets\original_drought.csv"
-original_weather_csv = "originaldatasets\original_weather.csv"
+original_rainfall_csv = r"originaldatasets\original_rainfall.csv"
+original_cropproduction_csv = r"originaldatasets\original_cropproduction.csv"
+original_drought_csv = r"originaldatasets\original_drought.csv"
+original_weather_csv = r"originaldatasets\original_weather.csv"
 
 # original_rainfall_csv = ""
 # original_cropproduction_csv = ""
@@ -39,12 +39,12 @@ database_mapping = {
 
 
 def extract_rainfall():
-    original_rainfall_csv = "originaldatasets/original_rainfall.csv"
+    original_rainfall_csv = r"originaldatasets/original_rainfall.csv"
     original_rainfall_csv_data = pd.read_csv(original_rainfall_csv)
     return original_rainfall_csv_data
 
 def extract_cropproduction():
-    original_cropproduction_csv = "originaldatasets\original_cropproduction.csv"
+    original_cropproduction_csv = r"originaldatasets\original_cropproduction.csv"
     original_cropproduction_csv_data = pd.read_csv(original_cropproduction_csv)
     return original_cropproduction_csv_data
 
@@ -56,7 +56,7 @@ def extract_cropproduction():
 def extract_drought():
     
     try:
-        original_drought_csv = "originaldatasets\original_drought.csv"
+        original_drought_csv = r"originaldatasets\original_drought.csv"
         original_drought_csv_data = pd.read_csv(original_drought_csv)
     except FileNotFoundError:
         print("The original file is not found. Using the alternative file.")
@@ -67,7 +67,7 @@ def extract_drought():
 
 
 def extract_weather():
-    original_weather_csv="originaldatasets\original_weather.csv"
+    original_weather_csv=r"originaldatasets\original_weather.csv"
     original_weather_csv_data=pd.read_csv(original_weather_csv)
     return original_weather_csv_data
 
@@ -77,36 +77,43 @@ def transform_rainfall(original_rainfall_csv_data):
     transformed_rainfall_csv_data = original_rainfall_csv_data.drop(columns=["JF", "MAM", "JJAS", "OND"])
     transformed_rainfall_csv_data = transformed_rainfall_csv_data.rename(columns={"SUBDIVISION": "State"})
     transformed_rainfall_csv_data=transformed_rainfall_csv_data.dropna()
-    transformed_rainfall_csv_data.to_csv("transformeddatasets/transformed_rainfall.csv", index=False)
+    transformed_rainfall_csv_data.to_csv(r"transformeddatasets/transformed_rainfall.csv", index=False)
     return transformed_rainfall_csv_data
 
 def transform_cropproduction(original_cropproduction_csv_data):
     transformed_cropproduction_csv_data = original_cropproduction_csv_data.rename(columns={"State_Name": "State", "District_Name": "District", "Crop_Year":"Year"})
     transformed_cropproduction_csv_data= transformed_cropproduction_csv_data.dropna()
-    transformed_cropproduction_csv_data.to_csv("transformeddatasets/transformed_cropproduction.csv", index=False)
+    transformed_cropproduction_csv_data.to_csv(r"transformeddatasets/transformed_cropproduction.csv", index=False)
     return transformed_cropproduction_csv_data
 
 def transform_drought(original_drought_csv_data):
     transformed_drought_csv_data=original_drought_csv_data.rename(columns={"ModerateDroughtProbability": "Moderate_prob", "SevereDroughtProbability":"Severe_prob"})
     transformed_drought_csv_data=transformed_drought_csv_data.dropna()
-    transformed_drought_csv_data.to_csv("transformeddatasets/transformed_drought.csv", index=False)
+    transformed_drought_csv_data.to_csv(r"transformeddatasets/transformed_drought.csv", index=False)
     return transformed_drought_csv_data
 
 def transform_weather(original_weather_csv_data):
     transformed_weather_csv_data=original_weather_csv_data.drop(columns=["sealevelpressure", "winddir", "cloudcover", "visibility", "severerisk"])
     transformed_weather_csv_data=transformed_weather_csv_data.rename(columns={"name":"District", "datetime":"Date"})    
     transformed_weather_csv_data=transformed_weather_csv_data.dropna()
-    transformed_weather_csv_data.to_csv("transformeddatasets/transformed_weather.csv", index=False)
+    transformed_weather_csv_data.to_csv(r"transformeddatasets/transformed_weather.csv", index=False)
     return transformed_weather_csv_data
 
 from sqlalchemy import create_engine
+import urllib.parse
 username = "root"
-password = "12345"
+password = "tony022002@Kuku"
 host = "localhost"
 port = "3306"  # Default MySQL port is 3306
 database = "farmerdatabase"
-connection_string = f"mysql://{username}:{password}@{host}:{port}/{database}"
+
+# Encode the password using urllib.parse.quote_plus
+quoted_password = urllib.parse.quote_plus(password)
+
+connection_string = f"mysql://{username}:{quoted_password}@{host}:{port}/{database}"
 engine = create_engine(connection_string)
+
+
 
 # loading
 def global_loading(rainfall, drought, cropproduction, weather):

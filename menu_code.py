@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import errors
 import time
 from colorama import Fore, Style, init
-mydb=mysql.connector.connect(host = "localhost", user = "root", passwd = "12345")
+mydb=mysql.connector.connect(host = "localhost", user = "root", passwd = "tony022002@Kuku")
 import sys
 
 mycur=mydb.cursor()
